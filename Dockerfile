@@ -1,9 +1,26 @@
-FROM golang:1.20
+FROM golang:1.20 as builder
 
-WORKDIR /usr/src/app
 
-COPY go.mod full-cycle.go ./
+RUN mkdir -p /app
+WORKDIR /app
 
-RUN go build -o full-cycle .
+COPY go.mod .
+COPY full-cycle.go .
 
-CMD ./full-cycle
+ENV GOPROXY https://proxy.golang.org,direct
+
+RUN go mod download
+
+COPY . .
+
+ENV CGO_ENABLED=0
+
+RUN GOOS=linux go build ./full-cycle.go
+
+FROM scratch
+
+WORKDIR /app
+
+COPY --from=builder /app/full-cycle .
+
+CMD ["/app/full-cycle"]
